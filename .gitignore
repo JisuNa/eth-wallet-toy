@@ -49,3 +49,6 @@ docs/plan/portfolio.md
 .claude/
 .mcp.json
 
+### Environment ###
+.env
+
