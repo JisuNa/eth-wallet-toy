@@ -29,6 +29,7 @@ Kotlin + Spring Boot + JPA based MSA backend service
 7. Do not write boilerplate code that Kotlin already solves (e.g., manual getters/setters, explicit singletons — use data class, object, etc.)
 8. Do not catch exceptions silently. Always log or rethrow.
 9. Do not use field injection (@Autowired). Use constructor injection only.
+10. Separate logical steps within a method with blank lines.
 
 ## Git Strategy
 - main ← dev ← feature/*
