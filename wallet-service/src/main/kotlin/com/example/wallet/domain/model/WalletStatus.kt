@@ -6,4 +6,6 @@ enum class WalletStatus {
     DEACTIVATED;
 
     fun isActive(): Boolean = this == ACTIVE
+
+    fun isNotActive(): Boolean = this != ACTIVE
 }

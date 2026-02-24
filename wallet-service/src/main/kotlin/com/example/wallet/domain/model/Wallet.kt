@@ -11,26 +11,51 @@ import java.math.BigDecimal
 @Entity
 @Table(name = "wallet")
 class Wallet(
-    val userId: Long,
+    val memberId: Long,
 
-    @Column(unique = true)
-    val address: String,
+    @Column(length = 10)
+    val symbol: String,
+
+    @Column(columnDefinition = "TEXT")
+    val encryptedAddress: String,
+
+    @Column(length = 64, unique = true)
+    val addressBlindIndex: String,
+
+    @Column(columnDefinition = "TEXT")
+    val encryptedPrivateKey: String,
 
     @Column(precision = 38, scale = 18)
     var balance: BigDecimal = BigDecimal.ZERO,
 
     @Enumerated(EnumType.STRING)
     var status: WalletStatus = WalletStatus.ACTIVE,
-
 ) : BaseAuditEntity() {
 
+    fun isNotActive(): Boolean = status.isNotActive()
+
     companion object {
-        fun create(userId: Long, address: String): Wallet {
-            require(userId > 0) { "userId must be positive" }
-            require(address.startsWith("0x") && address.length == 42) { "invalid ethereum address" }
+        private const val BLIND_INDEX_LENGTH = 64
+
+        fun create(
+            memberId: Long,
+            symbol: String,
+            encryptedAddress: String,
+            addressBlindIndex: String,
+            encryptedPrivateKey: String,
+        ): Wallet {
+            require(memberId > 0) { "memberId must be positive" }
+            require(symbol.isNotBlank()) { "symbol must not be blank" }
+            require(encryptedAddress.isNotBlank()) { "encryptedAddress must not be blank" }
+            require(addressBlindIndex.length == BLIND_INDEX_LENGTH) { "addressBlindIndex must be $BLIND_INDEX_LENGTH characters" }
+            require(encryptedPrivateKey.isNotBlank()) { "encryptedPrivateKey must not be blank" }
+
             return Wallet(
-                userId = userId,
-                address = address,
+                memberId = memberId,
+                symbol = symbol,
+                encryptedAddress = encryptedAddress,
+                addressBlindIndex = addressBlindIndex,
+                encryptedPrivateKey = encryptedPrivateKey,
             )
         }
     }

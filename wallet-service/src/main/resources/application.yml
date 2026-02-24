@@ -18,3 +18,15 @@ spring:
 
 server:
   port: ${SERVER_PORT:8081}
+
+aws:
+  kms:
+    endpoint: ${KMS_ENDPOINT:http://localhost:4566}
+    region: ${KMS_REGION:ap-northeast-2}
+    access-key: ${KMS_ACCESS_KEY:test}
+    secret-key: ${KMS_SECRET_KEY:test}
+    data-key-alias: ${KMS_DATA_KEY_ALIAS:alias/wallet-data-key}
+
+wallet:
+  security:
+    hmac-secret: ${WALLET_HMAC_SECRET:local-dev-hmac-secret-key-minimum-32-bytes!!}

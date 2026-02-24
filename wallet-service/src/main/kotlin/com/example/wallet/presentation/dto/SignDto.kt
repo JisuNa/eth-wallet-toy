@@ -2,7 +2,11 @@ package com.example.wallet.presentation.dto
 
 import jakarta.validation.constraints.NotBlank
 
-data class CreateWalletRequest(
+data class SignRequest(
     @field:NotBlank
-    val symbol: String,
+    val unsignedTx: String,
+)
+
+data class SignResponse(
+    val signedTx: String,
 )

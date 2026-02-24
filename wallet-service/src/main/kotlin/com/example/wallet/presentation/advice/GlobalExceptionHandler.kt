@@ -1,24 +1,30 @@
 package com.example.wallet.presentation.advice
 
 import com.example.wallet.domain.exception.BaseException
+import com.example.wallet.infrastructure.config.logger
 import com.example.wallet.presentation.common.BaseResponse
-import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.MethodArgumentNotValidException
+import org.springframework.web.bind.MissingRequestHeaderException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
 
-    private val log = LoggerFactory.getLogger(javaClass)
-
     @ExceptionHandler(BaseException::class)
     fun handleBaseException(e: BaseException): ResponseEntity<BaseResponse> {
-        log.warn("Business exception: {} - {}", e.errorCode.name, e.message)
+        logger.warn { "Business exception: ${e.errorCode.name} - ${e.message}" }
         return ResponseEntity
             .status(e.errorCode.status)
             .body(BaseResponse(code = e.errorCode.name, message = e.errorCode.message))
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException::class)
+    fun handleMissingHeader(e: MissingRequestHeaderException): ResponseEntity<BaseResponse> {
+        return ResponseEntity
+            .badRequest()
+            .body(BaseResponse(code = "MISSING_HEADER", message = "Required header '${e.headerName}' is missing"))
     }
 
     @ExceptionHandler(MethodArgumentNotValidException::class)
@@ -32,9 +38,13 @@ class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception::class)
     fun handleException(e: Exception): ResponseEntity<BaseResponse> {
-        log.error("Unexpected error", e)
+        logger.error(e) { "Unexpected error" }
         return ResponseEntity
             .internalServerError()
             .body(BaseResponse(code = "INTERNAL_ERROR", message = "Internal server error"))
+    }
+
+    companion object {
+        private val logger = logger()
     }
 }

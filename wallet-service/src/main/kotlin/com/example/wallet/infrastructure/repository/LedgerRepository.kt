@@ -1,4 +1,4 @@
-package com.example.wallet.domain.repository
+package com.example.wallet.infrastructure.repository
 
 import com.example.wallet.domain.model.Ledger
 import org.springframework.data.jpa.repository.JpaRepository

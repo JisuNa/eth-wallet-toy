@@ -58,6 +58,8 @@ services:
     environment:
       SERVICES: kms
       DEFAULT_REGION: ap-northeast-2
+    volumes:
+      - ./infra/localstack:/etc/localstack/init/ready.d
     deploy:
       resources:
         limits:

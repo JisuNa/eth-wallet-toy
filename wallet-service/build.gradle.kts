@@ -25,7 +25,10 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation("io.github.oshai:kotlin-logging-jvm:7.0.3")
     implementation("org.web3j:core:4.12.3")
+    implementation(platform("software.amazon.awssdk:bom:2.25.16"))
+    implementation("software.amazon.awssdk:kms")
 
     runtimeOnly("com.mysql:mysql-connector-j")
 

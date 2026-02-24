@@ -8,37 +8,108 @@ import java.math.BigDecimal
 
 class WalletTest : DescribeSpec({
 
-    describe("Wallet 생성") {
-        it("유효한 userId와 address로 Wallet을 생성하면 ACTIVE 상태와 0 잔액을 가진다") {
-            val wallet = Wallet.create(userId = 1L, address = "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD38")
+    val validBlindIndex = "a".repeat(64)
 
-            wallet.userId shouldBe 1L
+    describe("Wallet 생성") {
+        it("유효한 암호화 필드로 Wallet을 생성하면 ACTIVE 상태와 0 잔액을 가진다") {
+            val wallet = Wallet.create(
+                memberId = 1L,
+                symbol = "ETH",
+                encryptedAddress = "enc-address",
+                addressBlindIndex = validBlindIndex,
+                encryptedPrivateKey = "enc-private-key",
+            )
+
+            wallet.memberId shouldBe 1L
+            wallet.symbol shouldBe "ETH"
+            wallet.encryptedAddress shouldBe "enc-address"
+            wallet.addressBlindIndex shouldBe validBlindIndex
+            wallet.encryptedPrivateKey shouldBe "enc-private-key"
             wallet.status shouldBe WalletStatus.ACTIVE
             wallet.balance shouldBeEqualComparingTo BigDecimal.ZERO
-            wallet.address shouldBe "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD38"
         }
 
-        it("userId가 0 이하이면 예외가 발생한다") {
+        it("memberId가 0 이하이면 예외가 발생한다") {
             shouldThrow<IllegalArgumentException> {
-                Wallet.create(userId = 0L, address = "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD38")
+                Wallet.create(
+                    memberId = 0L,
+                    symbol = "ETH",
+                    encryptedAddress = "enc-address",
+                    addressBlindIndex = validBlindIndex,
+                    encryptedPrivateKey = "enc-private-key",
+                )
             }
         }
 
-        it("음수 userId로 생성하면 예외가 발생한다") {
+        it("음수 memberId로 생성하면 예외가 발생한다") {
             shouldThrow<IllegalArgumentException> {
-                Wallet.create(userId = -1L, address = "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD38")
+                Wallet.create(
+                    memberId = -1L,
+                    symbol = "ETH",
+                    encryptedAddress = "enc-address",
+                    addressBlindIndex = validBlindIndex,
+                    encryptedPrivateKey = "enc-private-key",
+                )
             }
         }
 
-        it("0x로 시작하지 않는 주소이면 예외가 발생한다") {
+        it("symbol이 빈 문자열이면 예외가 발생한다") {
             shouldThrow<IllegalArgumentException> {
-                Wallet.create(userId = 1L, address = "742d35Cc6634C0532925a3b844Bc9e7595f2bD38")
+                Wallet.create(
+                    memberId = 1L,
+                    symbol = "",
+                    encryptedAddress = "enc-address",
+                    addressBlindIndex = validBlindIndex,
+                    encryptedPrivateKey = "enc-private-key",
+                )
             }
         }
 
-        it("길이가 42가 아닌 주소이면 예외가 발생한다") {
+        it("symbol이 공백만 포함하면 예외가 발생한다") {
             shouldThrow<IllegalArgumentException> {
-                Wallet.create(userId = 1L, address = "0x742d35Cc")
+                Wallet.create(
+                    memberId = 1L,
+                    symbol = "   ",
+                    encryptedAddress = "enc-address",
+                    addressBlindIndex = validBlindIndex,
+                    encryptedPrivateKey = "enc-private-key",
+                )
+            }
+        }
+
+        it("encryptedAddress가 빈 문자열이면 예외가 발생한다") {
+            shouldThrow<IllegalArgumentException> {
+                Wallet.create(
+                    memberId = 1L,
+                    symbol = "ETH",
+                    encryptedAddress = "",
+                    addressBlindIndex = validBlindIndex,
+                    encryptedPrivateKey = "enc-private-key",
+                )
+            }
+        }
+
+        it("addressBlindIndex 길이가 64가 아니면 예외가 발생한다") {
+            shouldThrow<IllegalArgumentException> {
+                Wallet.create(
+                    memberId = 1L,
+                    symbol = "ETH",
+                    encryptedAddress = "enc-address",
+                    addressBlindIndex = "short-index",
+                    encryptedPrivateKey = "enc-private-key",
+                )
+            }
+        }
+
+        it("encryptedPrivateKey가 빈 문자열이면 예외가 발생한다") {
+            shouldThrow<IllegalArgumentException> {
+                Wallet.create(
+                    memberId = 1L,
+                    symbol = "ETH",
+                    encryptedAddress = "enc-address",
+                    addressBlindIndex = validBlindIndex,
+                    encryptedPrivateKey = "",
+                )
             }
         }
     }

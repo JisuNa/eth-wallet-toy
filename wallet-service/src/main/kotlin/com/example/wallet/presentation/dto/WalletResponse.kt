@@ -6,8 +6,8 @@ import java.math.BigDecimal
 import java.time.LocalDateTime
 
 data class WalletResponse(
-    val id: Long,
-    val userId: Long,
+    val memberId: Long,
+    val symbol: String,
     val address: String,
     val balance: BigDecimal,
     val status: WalletStatus,
@@ -15,10 +15,10 @@ data class WalletResponse(
     val updatedAt: LocalDateTime,
 )
 
-fun Wallet.toResponse(): WalletResponse = WalletResponse(
-    id = id,
-    userId = userId,
-    address = address,
+fun Wallet.toResponse(decryptedAddress: String): WalletResponse = WalletResponse(
+    memberId = memberId,
+    symbol = symbol,
+    address = decryptedAddress,
     balance = balance,
     status = status,
     createdAt = createdAt,
