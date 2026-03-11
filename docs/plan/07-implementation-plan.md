@@ -53,10 +53,8 @@ services:
 - `IdempotencyChecker` (Redis SET + TTL)
 
 **kafka/** — Kafka 공통 설정
-- `KafkaProducerConfig` (idempotent producer)
 - `KafkaConsumerConfig` (manual ACK, DLT error handler)
-- `OutboxEvent` 엔티티 + Repository
-- `OutboxPollingPublisher` (@Scheduled)
+- 이벤트별 전용 테이블 + Debezium CDC로 발행 (이벤트 엔티티는 각 서비스 모듈에 정의)
 
 **kms/** — KMS 암호화
 - `KmsClient` 인터페이스
@@ -75,10 +73,10 @@ services:
 |------|------|
 | Entity | `Wallet` JPA 엔티티 (EncryptedStringConverter 적용) |
 | Repository | `WalletRepository` (findByWalletId, findByAddressBlind) |
-| Service | `WalletService.createWallet()` - 키 생성, 암호화, Blind Index, 저장, Outbox |
+| Service | `WalletService.createWallet()` - 키 생성, 암호화, Blind Index, 저장, wallet_created_event INSERT |
 | Controller | `WalletController` - POST/GET 엔드포인트 |
 | ETH 키 생성 | web3j를 사용한 키 쌍 생성 (ECKeyPair → address, privateKey) |
-| 이벤트 | WalletCreatedEvent → Outbox → Kafka |
+| 이벤트 | wallet_created_event INSERT → Debezium CDC → Kafka |
 | Internal API | 잔액 차감/증가 API (서비스 간 통신용) |
 
 > 사용자 지갑은 입금 주소 역할. 잔액은 장부(ledger) 기록.
@@ -112,13 +110,13 @@ Client → [transaction-service]
   │ 3. wallet-service 호출 → 잔액 차감 (Circuit Breaker)
   │ 4. 시세 체크: amount × ETH 시세
   │
-  ├─ < 50만원 → Transaction PENDING → Outbox: tx.withdrawal.requested
+  ├─ < 50만원 → Transaction PENDING + withdrawal_requested_event INSERT
   │
   └─ ≥ 50만원 → Transaction PENDING_APPROVAL
                   │
                   ▼
-              관리자 승인 API → PENDING → Outbox: tx.withdrawal.requested
-              관리자 거부 API → REJECTED → wallet.balance.update(CREDIT) → 잔액 복구
+              관리자 승인 API → PENDING + withdrawal_requested_event INSERT
+              관리자 거부 API → REJECTED + balance_update_event INSERT (CREDIT) → 잔액 복구
 ```
 
 ### blockchain-service
@@ -127,7 +125,7 @@ Client → [transaction-service]
 |------|------|
 | Entity | `BroadcastTransaction` (PENDING, BROADCAST, CONFIRMED, FAILED) |
 | Consumer | tx.withdrawal.requested 구독 → 핫월렛으로 서명 → 브로드캐스트 |
-| 컨펌 폴링 | @Scheduled로 BROADCAST 상태 트랜잭션 컨펌 확인 |
+| 컨펌 확인 | Self-publishing 비동기 메시지로 컨펌 확인 (blockchain.tx.check-confirmation) |
 | 입금 감지 | @Scheduled로 블록 스캔, 우리 주소 입금 감지 (wallet.created 구독으로 주소 목록 관리) |
 | 이벤트 발행 | blockchain.tx.confirmed (CONFIRMED/FAILED) |
 | 핫월렛 | Secrets Manager에서 키 조회, 매 서명 시 조회 후 즉시 참조 해제 |
@@ -146,8 +144,14 @@ Kafka [tx.withdrawal.requested]
   │ 3. 트랜잭션 서명 (web3j)
   │ 4. 노드 프로바이더로 브로드캐스트 (Infura → 실패 시 Octet failover)
   │ 5. BroadcastTransaction BROADCAST + tx hash 저장
-  │ 6. 컨펌 폴링 (@Scheduled) → CONFIRMED/FAILED
-  │ 7. Outbox: blockchain.tx.confirmed
+  │ 6. check_confirmation_event INSERT (retryCount=0)
+  │
+  ▼
+Kafka [blockchain.tx.check-confirmation] (self-publishing loop)
+  │ 1. 노드 프로바이더에 컨펌 상태 조회
+  │ 2-a. 미확인 → retryCount++ 후 check_confirmation_event INSERT
+  │ 2-b. 확인됨 → block_confirmed_event INSERT (CONFIRMED)
+  │ 2-c. retryCount > maxRetry → FAILED 처리 → block_confirmed_event INSERT (FAILED)
   │
   ▼
 Kafka [blockchain.tx.confirmed]
@@ -155,7 +159,7 @@ Kafka [blockchain.tx.confirmed]
   ▼
 [transaction-service]
   │ CONFIRMED → Transaction CONFIRMED
-  │ FAILED    → Transaction FAILED → wallet.balance.update(CREDIT) → 잔액 복구
+  │ FAILED    → Transaction FAILED + balance_update_event INSERT (CREDIT) → 잔액 복구
 ```
 
 > 포트폴리오 환경: WireMock으로 Infura/Octet API 모킹
@@ -168,12 +172,12 @@ Kafka [blockchain.tx.confirmed]
 [blockchain-service]
   │ 1. @Scheduled 블록 스캔 (노드 프로바이더 API)
   │ 2. 우리 주소로 들어온 입금 감지
-  │ 3. Outbox: tx.deposit.detected
+  │ 3. deposit_detected_event INSERT
   │
   ▼
 [transaction-service]
   │ 1. DEPOSIT 트랜잭션 생성 (CONFIRMED)
-  │ 2. Outbox: wallet.balance.update(CREDIT)
+  │ 2. balance_update_event INSERT (CREDIT)
   │
   ▼
 [wallet-service]

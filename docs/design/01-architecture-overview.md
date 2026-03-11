@@ -15,6 +15,7 @@
 | Database | MySQL 8.0 (서비스별 분리) |
 | Cache / Lock | Redis 7 + Redisson |
 | Messaging | Apache Kafka (KRaft mode) |
+| CDC | Debezium (Outbox Event Router) |
 | Encryption | AWS KMS (LocalStack) + AES-256 |
 | Resilience | Resilience4j |
 | Secret | AWS Secrets Manager (LocalStack) |
@@ -49,7 +50,7 @@
 |---------|------|-----|------|
 | **wallet-service** | 지갑 생성, 잔액 조회, 주소 관리 | MySQL (wallet_db) | 8081 |
 | **transaction-service** | 출금/입금 트랜잭션 처리, 상태 관리 | MySQL (transaction_db) | 8082 |
-| **blockchain-service** | 노드 프로바이더 게이트웨이 (트랜잭션 브로드캐스트, 컨펌 폴링, 입금 감지), 핫월렛 관리 | MySQL (blockchain_db) | 8083 |
+| **blockchain-service** | 노드 프로바이더 게이트웨이 (트랜잭션 브로드캐스트, 컨펌 확인, 입금 감지), 핫월렛 관리 | MySQL (blockchain_db) | 8083 |
 
 ---
 
