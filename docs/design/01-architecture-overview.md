@@ -17,6 +17,8 @@
 | Messaging | Apache Kafka (KRaft mode) |
 | Encryption | AWS KMS (LocalStack) + AES-256 |
 | Resilience | Resilience4j |
+| Secret | AWS Secrets Manager (LocalStack) |
+| Mock | WireMock (노드 프로바이더 API 모킹) |
 | Container | Docker Compose |
 
 ---
@@ -47,7 +49,7 @@
 |---------|------|-----|------|
 | **wallet-service** | 지갑 생성, 잔액 조회, 주소 관리 | MySQL (wallet_db) | 8081 |
 | **transaction-service** | 출금/입금 트랜잭션 처리, 상태 관리 | MySQL (transaction_db) | 8082 |
-| **blockchain-service** | 이더리움 네트워크 시뮬레이션, 블록 확인 | MySQL (blockchain_db) | 8083 |
+| **blockchain-service** | 노드 프로바이더 게이트웨이 (트랜잭션 브로드캐스트, 컨펌 폴링, 입금 감지), 핫월렛 관리 | MySQL (blockchain_db) | 8083 |
 
 ---
 
@@ -59,15 +61,36 @@
 ### 비동기 통신 (Kafka)
 
 ```
-wallet-service ──wallet.created──────────────► transaction-service
-                                                      │
-transaction-service ──tx.withdrawal.requested──►blockchain-service
-                                                      │
+wallet-service ──wallet.created──────────────► blockchain-service (입금 모니터링 주소 등록)
+
+transaction-service ──tx.withdrawal.requested──► blockchain-service
+
 blockchain-service ──blockchain.tx.confirmed───► transaction-service
 blockchain-service ──tx.deposit.detected───────► transaction-service
-                                                      │
+
 transaction-service ──wallet.balance.update────► wallet-service
 ```
+
+### 외부 통신 (Node Provider)
+
+```
+blockchain-service ──JSON-RPC──► Infura (primary)
+                   ──REST API──► Octet (failover)
+
+※ 포트폴리오 환경에서는 WireMock으로 노드 프로바이더 API 모킹
+```
+
+### Node Provider 추상화
+
+프로바이더별 프로토콜이 다르므로 어댑터 패턴으로 추상화한다.
+
+```
+BlockchainClient (interface)
+├── InfuraClient    ── JSON-RPC (eth_sendRawTransaction, eth_getTransactionReceipt)
+└── OctetClient     ── REST API (자체 API 스펙)
+```
+
+Resilience4j Circuit Breaker로 primary(Infura) 장애 시 failover(Octet)로 자동 전환.
 
 ---
 
@@ -88,7 +111,7 @@ eth-wallet-toy/
 ├── transaction/                         # 트랜잭션 도메인 (Spring Boot 앱, :8082)
 │   └── build.gradle.kts
 │
-├── blockchain/                          # 블록체인 시뮬레이터 (Spring Boot 앱, :8083)
+├── blockchain/                          # 블록체인 게이트웨이 (Spring Boot 앱, :8083)
 │   └── build.gradle.kts
 │
 └── docker/
@@ -113,4 +136,4 @@ eth-wallet-toy/
 
 - `core`: 공유 도메인 프리미티브(Money, EthAddress VO), 이벤트 스키마, 예외 처리, JPA/Redis/Kafka/KMS 공통 설정
 - 도메인 모듈 간 컴파일 의존 없음. `transaction` → `wallet`은 런타임 REST 호출 (Circuit Breaker 적용)
-- `blockchain`처럼 Redis/KMS 불필요한 서비스는 `@ConditionalOnProperty`로 비활성화
+- `blockchain-service`는 핫월렛 키를 Secrets Manager에서 관리. Redis는 `@ConditionalOnProperty`로 비활성화 가능
