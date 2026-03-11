@@ -1,6 +1,18 @@
 # CLAUDE.md
 
-Kotlin + Spring Boot + JPA based MSA backend service
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+Kotlin + Spring Boot + JPA based MSA backend service for Ethereum wallet management.
+
+## Build & Test Commands
+```bash
+./gradlew build                    # Build all modules
+./gradlew :wallet:build            # Build specific module
+./gradlew test                     # Run all tests
+./gradlew :wallet:test             # Run tests for specific module
+./gradlew :wallet:test --tests "com.ethwallet.wallet.SomeTest"  # Single test class
+./gradlew :wallet:bootRun          # Run wallet-service (port 8081)
+```
 
 ## Tech Stack
 - Kotlin 2.2+, Java 21
@@ -16,9 +28,22 @@ Kotlin + Spring Boot + JPA based MSA backend service
 
 ## Project Structure
 - Monorepo: Gradle multi-module (core, wallet, transaction, blockchain)
-- `core` module: shared library (domain primitives, event schemas, exception handling, JPA/Redis/Kafka/KMS config)
+- `core` module: shared library (domain primitives, event schemas, exception handling, JPA/Redis/Kafka/KMS config). Packaged as JAR (bootJar disabled).
 - Domain modules (`wallet`, `transaction`, `blockchain`): Spring Boot apps depending on `:core`
 - No compile-time dependency between domain modules. Inter-service communication via REST (Circuit Breaker) and Kafka.
+
+## Package Conventions
+- Base package: `com.ethwallet.core` (core module), `com.ethwallet.{module}` (domain modules)
+- Domain module layers: `controller/`, `service/`, `domain/` (entity + repository), `dto/`
+- Core module layers: `domain/` (shared enums), `exception/`, `jpa/`, `kms/`, `response/`
+
+## Key Patterns
+- Entities extend `BaseAuditEntity` (auto id, createdAt, updatedAt via JPA auditing)
+- API responses wrapped in `SingleResponse<T>` (from `core.response`)
+- Sensitive fields (address, privateKey) use `EncryptedStringConverter` (envelope encryption via KMS)
+- Blind index for encrypted searchable fields (`SecureIndexGenerator`)
+- Entity factory via companion `create()` methods
+- DTO conversion via extension functions: `toResponse()`, `from()` on companion
 
 ## Rules
 1. Do not perform tasks that were not explicitly requested. Do not create, modify, or delete files beyond what is asked.
@@ -40,6 +65,4 @@ Kotlin + Spring Boot + JPA based MSA backend service
 ## Environment
 - JDK 21
 - Profiles: local, dev, prod
-
-## References
-TBD
+- DB connection via env vars: DB_URL, DB_USERNAME, DB_PASSWORD, BLIND_INDEX_SECRET
