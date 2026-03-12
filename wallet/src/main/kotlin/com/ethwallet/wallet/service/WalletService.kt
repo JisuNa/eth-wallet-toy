@@ -1,12 +1,15 @@
 package com.ethwallet.wallet.service
 
 import com.ethwallet.core.kms.SecureIndexGenerator
+import com.ethwallet.core.exception.BaseException
+import com.ethwallet.core.exception.ErrorCode
 import com.ethwallet.wallet.domain.Wallet
 import com.ethwallet.wallet.domain.WalletRepository
 import com.ethwallet.wallet.dto.WalletResponse
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.web3j.crypto.Keys
+import java.math.BigDecimal
 
 @Service
 class WalletService(
@@ -30,5 +33,13 @@ class WalletService(
         walletRepository.save(wallet)
 
         return WalletResponse.from(wallet)
+    }
+
+    @Transactional
+    fun deductBalance(walletId: String, amount: BigDecimal) {
+        val wallet = walletRepository.findByWalletId(walletId)
+            ?: throw BaseException(ErrorCode.WALLET_NOT_FOUND)
+
+        wallet.deductBalance(amount)
     }
 }

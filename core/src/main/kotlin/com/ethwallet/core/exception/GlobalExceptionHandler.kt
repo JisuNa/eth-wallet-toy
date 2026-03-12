@@ -1,19 +1,19 @@
 package com.ethwallet.core.exception
 
 import com.ethwallet.core.response.BaseResponse
-import org.slf4j.LoggerFactory
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 
+private val logger = KotlinLogging.logger {}
+
 @RestControllerAdvice
 class GlobalExceptionHandler {
 
-    private val log = LoggerFactory.getLogger(javaClass)
-
     @ExceptionHandler(BaseException::class)
     fun handleBaseException(e: BaseException): ResponseEntity<BaseResponse> {
-        log.warn("Business exception: {}", e.errorCode.message)
+        logger.warn { "Business exception: ${e.errorCode.message}" }
         return ResponseEntity
             .status(e.errorCode.status)
             .body(BaseResponse(code = e.errorCode.name, message = e.errorCode.message))
@@ -21,7 +21,7 @@ class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception::class)
     fun handleException(e: Exception): ResponseEntity<BaseResponse> {
-        log.error("Unexpected exception", e)
+        logger.error(e) { "Unexpected exception" }
         return ResponseEntity
             .status(ErrorCode.INTERNAL_ERROR.status)
             .body(BaseResponse(code = ErrorCode.INTERNAL_ERROR.name, message = ErrorCode.INTERNAL_ERROR.message))

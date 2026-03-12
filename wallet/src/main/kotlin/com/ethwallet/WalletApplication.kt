@@ -1,9 +1,9 @@
-package com.ethwallet.wallet
+package com.ethwallet
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 
-@SpringBootApplication(scanBasePackages = ["com.ethwallet"])
+@SpringBootApplication
 class WalletApplication
 
 fun main(args: Array<String>) {
