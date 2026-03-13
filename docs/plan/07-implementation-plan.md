@@ -31,7 +31,7 @@ services:
 - `Money` Value Object (BigDecimal 래핑, 연산 메서드)
 - `EthAddress` Value Object (검증 로직 포함)
 - `WalletStatus` enum (ACTIVE, FROZEN, DELETED)
-- `TransactionStatus` enum (PENDING_APPROVAL, PENDING, CONFIRMED, REJECTED, FAILED, ROLLBACK)
+- `TransactionStatus` enum (PENDING_APPROVAL, PENDING, PROCESSING, CONFIRMED, REJECTED, FAILED, ROLLBACK)
 - `TransactionType` enum (WITHDRAWAL, DEPOSIT)
 
 **event/** — 이벤트 스키마
@@ -91,7 +91,7 @@ services:
 
 | 작업 | 상세 |
 |------|------|
-| Entity | `Transaction` (PENDING_APPROVAL, PENDING, CONFIRMED, REJECTED, FAILED, ROLLBACK) |
+| Entity | `Transaction` (PENDING_APPROVAL, PENDING, PROCESSING, CONFIRMED, REJECTED, FAILED, ROLLBACK) |
 | 출금 API | POST /api/v1/transactions/withdrawal |
 | 관리자 승인/거부 API | POST /api/v1/admin/transactions/{txId}/approve, reject |
 | 시세 체크 | ETH 수량 × 시세(임시 하드코딩) ≥ 50만원 → PENDING_APPROVAL |
@@ -111,11 +111,13 @@ Client → [transaction-service]
   │ 4. 시세 체크: amount × ETH 시세
   │
   ├─ < 50만원 → Transaction PENDING + withdrawal_requested_event INSERT
+  │              → [blockchain-service] PROCESSING 전이 → 브로드캐스트 → CONFIRMED / FAILED → ROLLBACK
   │
   └─ ≥ 50만원 → Transaction PENDING_APPROVAL
                   │
                   ▼
               관리자 승인 API → PENDING + withdrawal_requested_event INSERT
+                               → [blockchain-service] PROCESSING 전이 → 브로드캐스트 → CONFIRMED / FAILED → ROLLBACK
               관리자 거부 API → REJECTED + balance_update_event INSERT (CREDIT) → 잔액 복구
 ```
 
@@ -140,11 +142,12 @@ Kafka [tx.withdrawal.requested]
   ▼
 [blockchain-service]
   │ 1. 이벤트 수신 → BroadcastTransaction PENDING 생성
-  │ 2. Secrets Manager에서 핫월렛 키 조회
-  │ 3. 트랜잭션 서명 (web3j)
-  │ 4. 노드 프로바이더로 브로드캐스트 (Infura → 실패 시 Octet failover)
-  │ 5. BroadcastTransaction BROADCAST + tx hash 저장
-  │ 6. check_confirmation_event INSERT (retryCount=0)
+  │ 2. PROCESSING 전이 이벤트 발행 → [transaction-service] tx PENDING → PROCESSING
+  │ 3. Secrets Manager에서 핫월렛 키 조회
+  │ 4. 트랜잭션 서명 (web3j)
+  │ 5. 노드 프로바이더로 브로드캐스트 (Infura → 실패 시 Octet failover)
+  │ 6. BroadcastTransaction BROADCAST + tx hash 저장
+  │ 7. check_confirmation_event INSERT (retryCount=0)
   │
   ▼
 Kafka [blockchain.tx.check-confirmation] (self-publishing loop)
@@ -203,11 +206,11 @@ Kafka [blockchain.tx.confirmed]
 | # | 시나리오 | 검증 포인트 |
 |---|---------|-----------|
 | 1 | 지갑 생성 | DB에 암호화된 주소 확인, Blind Index로 검색 확인 |
-| 2 | 출금 (< 50만원) | 즉시 PENDING, Kafka 이벤트 흐름, 핫월렛 브로드캐스트, 잔액 차감 |
-| 3 | 출금 (≥ 50만원) | PENDING_APPROVAL → 관리자 승인 → PENDING → 브로드캐스트 |
+| 2 | 출금 (< 50만원) | 즉시 PENDING → PROCESSING → 핫월렛 브로드캐스트 → CONFIRMED, 잔액 차감 |
+| 3 | 출금 (≥ 50만원) | PENDING_APPROVAL → 관리자 승인 → PENDING → PROCESSING → 브로드캐스트 |
 | 4 | 출금 거부 | PENDING_APPROVAL → REJECTED, 잔액 복구 |
 | 5 | 입금 감지 | 블록 스캔 → 자동 잔액 증가 |
 | 6 | Node Provider failover | Infura 장애 → Octet 전환 → 정상 브로드캐스트 |
 | 7 | 동시 출금 | 동일 지갑 동시 출금 → 분산 락으로 하나만 성공 |
 | 8 | 멱등성 | 같은 Idempotency-Key 재요청 → 캐시 응답 반환 |
-| 9 | Saga 롤백 | 브로드캐스트 실패 → FAILED → 잔액 복구 → ROLLBACK |
+| 9 | Saga 롤백 | PROCESSING → 브로드캐스트 실패 → FAILED → 잔액 복구 → ROLLBACK |
