@@ -1,7 +1,7 @@
 package com.ethwallet.wallet.domain
 
 import com.ethwallet.core.domain.WalletStatus
-import com.ethwallet.core.jpa.BaseAuditEntity
+import com.ethwallet.core.jpa.BaseModifyAuditEntity
 import com.ethwallet.core.kms.EncryptedStringConverter
 import com.ethwallet.core.exception.BaseException
 import com.ethwallet.core.exception.ErrorCode
@@ -27,7 +27,7 @@ class Wallet(
 
     @Enumerated(EnumType.STRING)
     var status: WalletStatus = WalletStatus.ACTIVE,
-) : BaseAuditEntity() {
+) : BaseModifyAuditEntity() {
 
     fun deductBalance(amount: BigDecimal) {
         if (balance < amount) {

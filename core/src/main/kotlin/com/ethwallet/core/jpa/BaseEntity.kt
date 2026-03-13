@@ -35,6 +35,10 @@ abstract class BaseAuditEntity : BaseEntity() {
     @Column(updatable = false)
     var createdAt: LocalDateTime = LocalDateTime.MIN
         protected set
+}
+
+@MappedSuperclass
+abstract class BaseModifyAuditEntity : BaseAuditEntity() {
 
     @LastModifiedDate
     var updatedAt: LocalDateTime = LocalDateTime.MIN

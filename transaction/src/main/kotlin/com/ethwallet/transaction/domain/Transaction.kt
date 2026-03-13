@@ -2,7 +2,7 @@ package com.ethwallet.transaction.domain
 
 import com.ethwallet.core.domain.TransactionStatus
 import com.ethwallet.core.domain.TransactionType
-import com.ethwallet.core.jpa.BaseAuditEntity
+import com.ethwallet.core.jpa.BaseModifyAuditEntity
 import com.ethwallet.core.kms.EncryptedStringConverter
 import jakarta.persistence.*
 import java.math.BigDecimal
@@ -28,7 +28,7 @@ class Transaction(
     var status: TransactionStatus,
 
     var txHash: String? = null,
-) : BaseAuditEntity() {
+) : BaseModifyAuditEntity() {
 
     fun approve() {
         status = TransactionStatus.PENDING
