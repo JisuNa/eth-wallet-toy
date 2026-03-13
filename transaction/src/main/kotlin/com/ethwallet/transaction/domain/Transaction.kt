@@ -30,6 +30,14 @@ class Transaction(
     var txHash: String? = null,
 ) : BaseAuditEntity() {
 
+    fun approve() {
+        status = TransactionStatus.PENDING
+    }
+
+    fun reject() {
+        status = TransactionStatus.REJECTED
+    }
+
     companion object {
         fun create(
             walletId: String,

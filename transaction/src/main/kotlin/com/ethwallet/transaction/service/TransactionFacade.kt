@@ -6,8 +6,10 @@ import com.ethwallet.core.exception.ErrorCode
 import com.ethwallet.core.redis.DistributedLockService
 import com.ethwallet.core.redis.IdempotencyChecker
 import com.ethwallet.core.redis.IdempotencyChecker.IdempotencyResult
+import com.ethwallet.transaction.dto.TransactionResponse
 import com.ethwallet.transaction.dto.WithdrawalRequest
 import com.ethwallet.transaction.dto.WithdrawalResponse
+import com.ethwallet.transaction.dto.toTransactionResponse
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
@@ -56,6 +58,14 @@ class TransactionFacade(
         val status = if (needsApproval) TransactionStatus.PENDING_APPROVAL else TransactionStatus.PENDING
 
         return transactionService.createTransaction(request, amount, status)
+    }
+
+    fun approveWithdrawal(txId: String): TransactionResponse {
+        return transactionService.approveTransaction(txId).toTransactionResponse()
+    }
+
+    fun rejectWithdrawal(txId: String): TransactionResponse {
+        return transactionService.rejectTransaction(txId).toTransactionResponse()
     }
 
     companion object {

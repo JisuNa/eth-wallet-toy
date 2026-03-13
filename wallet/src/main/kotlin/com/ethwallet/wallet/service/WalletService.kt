@@ -42,4 +42,12 @@ class WalletService(
 
         wallet.deductBalance(amount)
     }
+
+    @Transactional
+    fun addBalance(walletId: String, amount: BigDecimal) {
+        val wallet = walletRepository.findByWalletId(walletId)
+            ?: throw BaseException(ErrorCode.WALLET_NOT_FOUND)
+
+        wallet.addBalance(amount)
+    }
 }

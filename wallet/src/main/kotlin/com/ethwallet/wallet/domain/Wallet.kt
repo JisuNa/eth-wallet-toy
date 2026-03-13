@@ -36,6 +36,10 @@ class Wallet(
         balance = balance.subtract(amount)
     }
 
+    fun addBalance(amount: BigDecimal) {
+        balance = balance.add(amount)
+    }
+
     companion object {
         fun create(address: String, privateKey: String, addressBlind: String): Wallet {
             return Wallet(
