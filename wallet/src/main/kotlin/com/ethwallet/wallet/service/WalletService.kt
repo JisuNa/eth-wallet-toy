@@ -4,6 +4,8 @@ import com.ethwallet.core.kms.SecureIndexGenerator
 import com.ethwallet.core.exception.BaseException
 import com.ethwallet.core.exception.ErrorCode
 import com.ethwallet.wallet.domain.Wallet
+import com.ethwallet.wallet.domain.WalletLedger
+import com.ethwallet.wallet.domain.WalletLedgerRepository
 import com.ethwallet.wallet.domain.WalletRepository
 import com.ethwallet.wallet.dto.WalletResponse
 import org.springframework.stereotype.Service
@@ -14,6 +16,7 @@ import java.math.BigDecimal
 @Service
 class WalletService(
     private val walletRepository: WalletRepository,
+    private val walletLedgerRepository: WalletLedgerRepository,
     private val secureIndexGenerator: SecureIndexGenerator,
 ) {
 
@@ -41,6 +44,8 @@ class WalletService(
             ?: throw BaseException(ErrorCode.WALLET_NOT_FOUND)
 
         wallet.deductBalance(amount)
+
+        walletLedgerRepository.save(WalletLedger.deductBalance(walletId, amount))
     }
 
     @Transactional
@@ -49,5 +54,8 @@ class WalletService(
             ?: throw BaseException(ErrorCode.WALLET_NOT_FOUND)
 
         wallet.addBalance(amount)
+
+        walletLedgerRepository.save(WalletLedger.addBalance(walletId, amount))
     }
+
 }
